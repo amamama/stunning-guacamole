@@ -103,10 +103,24 @@ class Deck extends JSONConvertable {
     }
 }
 
+class DeckWithDate extends Deck {
+    constructor(name, decklist, date = new Date()) {
+        super(name, decklist);
+        this.date = date;
+    }
+
+    convertFromJSON(json) {
+        super.convertFromJSON(json);
+        this.date = new Date(this.date);
+        return this;
+    }
+}
+
 if(typeof module !== 'undefined')
 module.exports = {
     Card,
     CardWithPrice,
     Decklist,
-    Deck
+    Deck,
+    DeckWithDate
 };

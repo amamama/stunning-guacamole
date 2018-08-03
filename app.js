@@ -19,8 +19,9 @@ const goatbotsURI = 'https://www.goatbots.com/card/ajax_card?search_name=';
 
 const Request = require('request');
 const Cardlist = require('./cardlist');
+const cachedDate = new Date(2018, 6, 20); //month's  origin is 0
 
-const {Card, CardWithPrice, Decklist, Deck} = require('./views/deck');
+const {Card, CardWithPrice, Decklist, Deck, DeckWithDate} = require('./views/deck');
 
 async function fetchCardPrice(card) {
     const base = new Date();
@@ -31,6 +32,7 @@ async function fetchCardPrice(card) {
 
         return new CardWithPrice(card.name, card.number, price, 'Unkwon');
     } catch(e) {
+        console.log(e);
         return new CardWithPrice(card.name, card.number, 0, '', 'Not Available');
     }
 
@@ -46,12 +48,12 @@ async function calcCard(card, fetch = false) {
 }
 
 async function calcDecklist(decklist, fetch = false) {
-    if(decklist.decklist.length == 0) return new Decklist([], []);
+    if((decklist.main.length == 0 && decklist.sideboard.length == 0) || (decklist.decklist && decklist.decklist.length == 0)) return new Decklist([], []);
     return new Decklist(await Promise.all(decklist.main.map((c) => calcCard(c, fetch))), await Promise.all(decklist.sideboard.map((c) => calcCard(c, fetch))));
 }
 
 async function calcDeck(deck, fetch = false) {
-    return new Deck(deck.name, await calcDecklist(deck.decklist, fetch));
+    return new DeckWithPrice(deck.name, await calcDecklist(deck.decklist, fetch), fetch?new Date():cachedDate);
 }
 
 // ds: [str]
@@ -72,10 +74,8 @@ const router = new Router();
 
 router
     .get('/', async (ctx, next) => Send(ctx, '/views' + '/index.html'))
-    .get('/calc_cache', async (ctx, next) => ctx.body = await calcDecklist(new Decklist(decodeURIComponent(ctx.request.query.decklist))))
-    .post('/calc_cache', Body({multipart: true}), async (ctx, next) => ctx.body = ctx.request.body.decks?await calcDecks(ctx.request.body.decks):[])
-    .get('/calc', async (ctx, next) => ctx.body = await calcDecklist(new Decklist(decodeURIComponent(ctx.request.query.decklist)), true))
-    .post('/calc', Body({multipart: true}), async (ctx, next) => ctx.body = ctx.request.body.decks?await calcDecks(ctx.request.body.decks, true):[])
+    .get('/calc', async (ctx, next) => ctx.body = await calcDecklist(new Decklist(decodeURIComponent(ctx.request.query.decklist)), ctx.request.query.fetch == 'true'))
+    .post('/calc', Body({multipart: true}), async (ctx, next) => ctx.body = ctx.request.body.decks?await calcDecks(ctx.request.body.decks, ctx.request.body.fetch == 'true'):[])
     .get('/:str', async (ctx, next) => Send(ctx, '/views' + '/' + ctx.params.str))
 ;
 

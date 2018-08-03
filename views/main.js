@@ -3,17 +3,18 @@ function addEventListenerPromise(target, type, listener) {
 }
 
 async function calcTextDecklist(str, doFetch) {
-    return (new Decklist()).convertFromJSON(await fetch(`/calc${doFetch?'':'_cache'}?decklist=${encodeURIComponent(str)}`, {credentials: 'same-origin'}).then((r) => r.json()));
+    return (new Decklist()).convertFromJSON(await fetch(`/calc?decklist=${encodeURIComponent(str)}&fetch=${doFetch}`, {credentials: 'same-origin'}).then((r) => r.json()));
 }
 
 async function calcAllDecks(decks, doFetch) {
     const fd = new FormData();
 
     for(const deck of decks) fd.append('decks', deck.convertToJSON());
+    fd.append('fetch', doFetch);
 
-    let decks_json = await fetch(`/calc${doFetch?'':'_cache'}`, {method: 'POST', credentials: 'same-origin', body: fd}).then((r) => r.json());
+    let decks_json = await fetch(`/calc`, {method: 'POST', credentials: 'same-origin', body: fd}).then((r) => r.json());
 
-    return decks_json.map((json) => (new Deck()).convertFromJSON(json));
+    return decks_json.map((json) => (new DeckWithDate()).convertFromJSON(json));
 
 }
 
@@ -27,16 +28,19 @@ function load() {
     const dl_files = dl_form.decklist_files;
 
     const chkbox = document.getElementById('fetch');
+    const cachedDate = new Date(2018, 6, 20)
 
     dl_text.value = localStorage.getItem('decklist_text') || '';
 
     dl_files.addEventListener('change', readDeckFromFile);
 
     async function readDeckFromFile() {
+        const doFetch = chkbox.checked;
+        const date = doFetch?new Date():cachedDate;
         decks = await Promise.all(Array.from(dl_files.files).map((file) => {
             const reader = new FileReader();
             let p = addEventListenerPromise(reader, 'load', async (e) => {
-                updateTable(new Deck(file.name, await calcTextDecklist(reader.result, chkbox.checked)));
+                updateTable(new DeckWithDate(file.name, await calcTextDecklist(reader.result, doFetch), date));
                 return new Deck(file.name, new Decklist(reader.result));
             });
             reader.readAsText(file);
@@ -47,7 +51,9 @@ function load() {
 
     const calc_button = document.getElementById('calc');
     calc_button.addEventListener('click', async (e) => {
-        updateTable(new Deck('text', await calcTextDecklist(dl_text.value, chkbox.checked)));
+        const doFetch = chkbox.checked;
+        const date = doFetch?new Date():cachedDate; //month's origin is 0!
+        updateTable(new DeckWithDate('text', await calcTextDecklist(dl_text.value, doFetch), date));
         let decksWithPrice = await calcAllDecks(decks, chkbox.checked);
         decksWithPrice.map((d) => updateTable(d));
 
@@ -57,46 +63,6 @@ function load() {
     const reload_button = document.getElementById('reload');
     reload_button.addEventListener('click', readDeckFromFile);
 
-}
-
-function cardsToTable(cards) {
-    const table = document.createElement('table');
-    if(!cards) return table;
-    table.createTHead();
-    let headRow = table.tHead.insertRow();
-    headRow.insertCell().appendChild(document.createTextNode('Num of cards'));
-    headRow.insertCell().appendChild(document.createTextNode('Name'));
-    headRow.insertCell().appendChild(document.createTextNode('Price'));
-    headRow.insertCell().appendChild(document.createTextNode('Sum'));
-    headRow.insertCell().appendChild(document.createTextNode('Set'));
-    headRow.insertCell().appendChild(document.createTextNode('Foil'));
-
-    for(let card of cards) {
-        let row = table.insertRow();
-        row.insertCell().appendChild(document.createTextNode(card.number));
-        row.insertCell().appendChild(document.createTextNode(card.name));
-        row.insertCell().appendChild(document.createTextNode(card.price));
-        row.insertCell().appendChild(document.createTextNode(card.price_sum));
-        row.insertCell().appendChild(document.createTextNode(card.set));
-        row.insertCell().appendChild(document.createTextNode(card.foil?'*':''));
-    }
-
-    return table;
-}
-
-function decklistToTable(decklist) {
-    const table = document.createElement('table');
-    let row = table.insertRow();
-    row.insertCell().appendChild(cardsToTable(decklist.main));
-    row.insertCell().appendChild(cardsToTable(decklist.sideboard));
-
-    let mainPrice = decklist.main.map((c) => c.price_sum).reduce((acc, cur) => acc + cur, 0);
-    let sidePrice = decklist.sideboard.map((c) => c.price_sum).reduce((acc, cur) => acc + cur, 0);
-    let headRow = table.tHead.insertRow();
-    table.createTHead();
-    headRow.insertCell().appendChild(document.createTextNode(`Mainboard ${mainPrice.toFixed(3)} tix`));
-    headRow.insertCell().appendChild(document.createTextNode(`Sideboard ${sidePrice.toFixed(3)} tix`));
-    return {decklistTable: table, mainPrice, sidePrice};
 }
 
 function deckToTable(deck) {
@@ -148,21 +114,11 @@ function deckToTable(deck) {
             row.insertCell().appendChild(document.createTextNode(card.set));
         }
     }
-/*
-    table.createTHead();
-    table.tHead.insertRow().insertCell().appendChild(document.createTextNode('Decklist'));
-
-    const {decklistTable, mainPrice, sidePrice} = decklistToTable(deck.decklist);
-    table.insertRow().insertCell().appendChild(decklistTable);
 
     const totalPrice = mainPrice + sidePrice;
     table.createCaption();
-    table.caption.innerText = `${deck.name} total ${totalPrice.toFixed(3)} tix`;
-*/
-
-    const totalPrice = mainPrice + sidePrice;
-    table.createCaption();
-    table.caption.innerText = `${deck.name} total ${totalPrice.toFixed(3)} tix`;
+    const date = `${deck.date.getFullYear()}-${deck.date.getMonth() + 1}-${deck.date.getDate()}`;
+    table.caption.innerText = `${deck.name} total ${totalPrice.toFixed(3)} tix (${date})`;
     return table;
 }
 
