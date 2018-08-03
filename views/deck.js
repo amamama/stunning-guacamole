@@ -37,8 +37,7 @@ class Decklist extends JSONConvertable {
 
     set decklist(s) {
         this.dlist = s;
-        this.validateDecklist();
-        this.parseDecklist();
+        if(this.validateDecklist()) this.parseDecklist();
     }
 
     constructor(main, side) {

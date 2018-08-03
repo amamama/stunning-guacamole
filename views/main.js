@@ -129,8 +129,8 @@ function deckToTable(deck) {
             const card = deck.decklist.main[i];
             row.insertCell().appendChild(document.createTextNode(card.number));
             row.insertCell().appendChild(document.createTextNode(card.name));
-            row.insertCell().appendChild(document.createTextNode(card.price));
-            row.insertCell().appendChild(document.createTextNode(card.price_sum));
+            row.insertCell().appendChild(document.createTextNode(card.price.toFixed(3)));
+            row.insertCell().appendChild(document.createTextNode(card.price_sum.toFixed(3)));
             row.insertCell().appendChild(document.createTextNode(card.foil));
             row.insertCell().appendChild(document.createTextNode(card.set));
         } else {
@@ -142,8 +142,8 @@ function deckToTable(deck) {
             const card = deck.decklist.sideboard[i];
             row.insertCell().appendChild(document.createTextNode(card.number));
             row.insertCell().appendChild(document.createTextNode(card.name));
-            row.insertCell().appendChild(document.createTextNode(card.price));
-            row.insertCell().appendChild(document.createTextNode(card.price_sum));
+            row.insertCell().appendChild(document.createTextNode(card.price.toFixed(3)));
+            row.insertCell().appendChild(document.createTextNode(card.price_sum.toFixed(3)));
             row.insertCell().appendChild(document.createTextNode(card.foil));
             row.insertCell().appendChild(document.createTextNode(card.set));
         }

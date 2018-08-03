@@ -42,10 +42,11 @@ async function calcCard(card, fetch = false) {
     const regexpCard = new RegExp('^\\s*' + card.name + '\\s*$', 'i');
     const priceCard = Cardlist.find((c) => regexpCard.test(c.name));
     if(!priceCard) return new CardWithPrice(card.name, card.number, 0, '', 'Not Available');
-    return new CardWithPrice(priceCard.name, card.number, priceCard.price, priceCard.foil, priceCard.set, priceCard.cmc, priceCard.type);
+    return new CardWithPrice(priceCard.name, card.number, parseFloat(priceCard.price), priceCard.foil, priceCard.set, priceCard.cmc, priceCard.type);
 }
 
 async function calcDecklist(decklist, fetch = false) {
+    if(decklist.decklist.length == 0) return new Decklist([], []);
     return new Decklist(await Promise.all(decklist.main.map((c) => calcCard(c, fetch))), await Promise.all(decklist.sideboard.map((c) => calcCard(c, fetch))));
 }
 
