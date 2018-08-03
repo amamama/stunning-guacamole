@@ -6,58 +6,42 @@ async function calcTextDecklist(str, doFetch, date) {
     return (new Decklist()).convertFromJSON(await fetch(`/calc?decklist=${encodeURIComponent(str)}&fetch=${doFetch}&date=${date.toISOString()}`).then((r) => r.json()));
 }
 
-async function calcAllDecks(decks, doFetch, date) {
-    const fd = new FormData();
-
-    for(const deck of decks) fd.append('decks', deck.convertToJSON());
-    fd.append('fetch', doFetch);
-    fd.append('date', date.toISOString());
-
-    let decks_json = await fetch(`/calc`, {method: 'POST', body: fd}).then((r) => r.json());
-
-    return decks_json.map((json) => (new DeckWithDate()).convertFromJSON(json));
-
-}
-
 document.addEventListener('DOMContentLoaded', load);
 
 function load() {
-    let decks = [];
-
     const dl_form = document.getElementById('decklist_form');
     const dl_text = dl_form.decklist_text;
     const dl_files = dl_form.decklist_files;
-
-    const chkbox = document.getElementById('fetch');
-    const base = document.getElementById('date');
-    const cachedDate = new Date(2018, 6, 20)
 
     dl_text.value = localStorage.getItem('decklist_text') || '';
 
     dl_files.addEventListener('change', readDeckFromFile);
 
-    async function readDeckFromFile() {
+    async function calcTextDeck(name, str) {
+        const chkbox = document.getElementById('fetch');
+        const base = document.getElementById('date');
+        const cachedDate = new Date(2018, 6, 20);
+
         const doFetch = chkbox.checked;
         const date = doFetch?base.value == ""?new Date():new Date(base.value):cachedDate;
-        decks = await Promise.all(Array.from(dl_files.files).map((file) => {
+        return new DeckWithDate(name, await calcTextDecklist(str, doFetch, date), date);
+    }
+
+
+    async function readDeckFromFile() {
+        for(const file of Array.from(dl_files.files)) {
             const reader = new FileReader();
-            let p = addEventListenerPromise(reader, 'load', async (e) => {
-                updateTable(new DeckWithDate(file.name, await calcTextDecklist(reader.result, doFetch, date), date));
-                return new Deck(file.name, new Decklist(reader.result));
-            });
+            const resultPromise = addEventListenerPromise(reader, 'load', (e) => e.target.result);
             reader.readAsText(file);
-            return p;
-        }));
+            updateTable(await calcTextDeck(file.name, await resultPromise));
+        }
     }
 
 
     const calc_button = document.getElementById('calc');
     calc_button.addEventListener('click', async (e) => {
-        const doFetch = chkbox.checked;
-        const date = doFetch?base.value == ""?new Date():new Date(base.value):cachedDate;
-        updateTable(new DeckWithDate('text', await calcTextDecklist(dl_text.value, doFetch, date), date));
-        let decksWithPrice = await calcAllDecks(decks, doFetch, date);
-        decksWithPrice.map((d) => updateTable(d));
+        updateTable(await calcTextDeck('text', dl_text.value));
+        readDeckFromFile();
 
         localStorage.setItem('decklist_text', dl_text.value);
     });

@@ -74,7 +74,6 @@ const router = new Router();
 router
     .get('/', async (ctx, next) => Send(ctx, '/views' + '/index.html'))
     .get('/calc', async (ctx, next) => ctx.body = await calcDecklist(new Decklist(decodeURIComponent(ctx.request.query.decklist)), (ctx.request.query.fetch && ctx.request.query.fetch == 'true'), (!ctx.request.query.date || ctx.request.query.date == '')?new Date():new Date(ctx.request.query.date)))
-    .post('/calc', Body({multipart: true}), async (ctx, next) => ctx.body = ctx.request.body.decks?await calcDecks(ctx.request.body.decks, ctx.request.body.fetch == 'true', new Date(ctx.request.body.date)):[])
     .get('/:str', async (ctx, next) => Send(ctx, '/views' + '/' + ctx.params.str))
 ;
 
