@@ -48,7 +48,7 @@ async function calcCard(card, fetch = false) {
 }
 
 async function calcDecklist(decklist, fetch = false) {
-    if((decklist.main.length == 0 && decklist.sideboard.length == 0) || (decklist.decklist && decklist.decklist.length == 0)) return new Decklist([], []);
+    if(!decklist.main || (decklist.main.length == 0 && decklist.sideboard.length == 0) || !decklist.decklist || decklist.decklist.length == 0) return new Decklist([], []);
     return new Decklist(await Promise.all(decklist.main.map((c) => calcCard(c, fetch))), await Promise.all(decklist.sideboard.map((c) => calcCard(c, fetch))));
 }
 
