@@ -21,12 +21,12 @@
     "e2e-test": "repo-tools test deploy"
   },
   "dependencies": {
-    "@google-cloud/debug-agent": "^2.6.0",
     "koa": "latest",
     "koa-body": "latest",
     "koa-router": "latest",
     "koa-send": "latest",
-    "request": "latest"
+    "request": "latest",
+    "@google-cloud/debug-agent": "^2.4.0"
   },
   "devDependencies": {
     "@google-cloud/nodejs-repo-tools": "^2.3.0",

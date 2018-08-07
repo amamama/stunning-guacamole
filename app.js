@@ -14,7 +14,7 @@
  */
 
 'use strict';
-require('@google-cloud/debug-agent').start();
+require('@google-cloud/debug-agent').start({ allowExpressions: true });
 
 const goatbotsURI = 'https://www.goatbots.com/card/ajax_card?search_name=';
 
