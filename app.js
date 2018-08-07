@@ -14,6 +14,7 @@
  */
 
 'use strict';
+require('@google-cloud/debug-agent').start();
 
 const goatbotsURI = 'https://www.goatbots.com/card/ajax_card?search_name=';
 
@@ -24,17 +25,18 @@ const cachedDate = new Date(2018, 6, 20); //month's  origin is 0
 const {Card, CardWithPrice, Decklist, Deck, DeckWithDate} = require('./views/deck');
 
 async function fetchCardPrice(card, base = new Date()) {
+    //console.log(goatbotsURI + card.name.replace(/[ \/]/g, '-').replace(/[',]/g,''));
     try {
+        await new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000));
         const body = await new Promise((res, rej) => Request.get(goatbotsURI + card.name.replace(/[ \/]/g, '-').replace(/[',]/g,''), (err, response, body) => err?rej(err):res(body)));
         const json = JSON.parse(body);
         const price = json[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= base.getTime()?cur:acc)).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
 
-        return new CardWithPrice(card.name, card.number, price, 'Unkwon');
+        return new CardWithPrice(card.name, card.number, price, 'Unknown');
     } catch(e) {
         console.log(e);
         return new CardWithPrice(card.name, card.number, 0, '', 'Not Available');
     }
-
 }
 
 async function calcCard(card, fetch = false, date = new Date()) {
@@ -53,14 +55,6 @@ async function calcDecklist(decklist, fetch = false, date = new Date()) {
 
 async function calcDeck(deck, fetch = false, date = new Date()) {
     return new DeckWithDate(deck.name, await calcDecklist(deck.decklist, fetch, date), fetch?date:cachedDate);
-}
-
-// ds: [str]
-// return: [{decklist: {main: [{price_sum: float, price: float, foil: bool, set: str, name:str, number: int}], sideboard: [~]}, name: str}]
-async function calcDecks(ds, fetch = false, date = new Date()) {
-    const decks = (Array.isArray(ds)?ds.map((str) => JSON.parse(str)):[JSON.parse(ds)]).map((json) => (new Deck()).convertFromJSON(json));
-    //console.log(decks);
-    return await Promise.all(decks.map((d) => calcDeck(d, fetch, date)));
 }
 
 const Koa = require('koa');
