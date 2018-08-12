@@ -16,19 +16,34 @@
 'use strict';
 require('@google-cloud/debug-agent').start({ allowExpressions: true });
 
-const goatbotsURI = 'https://www.goatbots.com/card/ajax_card?search_name=';
 
-const Request = require('request');
+const goatbotsURI = 'https://www.goatbots.com';
+const goatbotsSearchURI = goatbotsURI + '/card/ajax_card?search_name=';
+const goatbots3dhURI = goatbotsURI + '/3dh';
+
+const Datastore = require('@google-cloud/datastore');
+const CheerioHttpcli = require('cheerio-httpcli');
 const Cardlist = require('./cardlist');
 const cachedDate = new Date(2018, 6, 20); //month's  origin is 0
 
 const {Card, CardWithPrice, Decklist, Deck, DeckWithDate} = require('./views/deck');
 
+function normalizeCardName(name) {
+    return name.toLowerCase().replace(/[ \/]a/g, '-').replace(/[',]/g,'');
+}
+
+async function fetch3dhTable() {
+    //let {$, response, body} = await CheerioHttpcli.fetch(goatbots3dhURI);
+    //({$, response, body} = await $('form').submit());
+    let {$, response, body} = await CheerioHttpcli.fetch('http://localhost:8000/3dh_july_2018.html');
+    const table = $('tr').toArray().map((e) => new CardWithPrice($($('td', e)[0]).text(), 1, parseFloat($($('td', e)[1]).text()), $($('td', e)[3]).text(), $($('td', e)[2]).text(), $($('td', e)[4]).text(), $($('td', e)[5]).text()));
+}
+
 async function fetchCardPrice(card, base = new Date()) {
     //console.log(goatbotsURI + card.name.replace(/[ \/]/g, '-').replace(/[',]/g,''));
     try {
         await new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000));
-        const body = await new Promise((res, rej) => Request.get(goatbotsURI + card.name.replace(/[ \/]/g, '-').replace(/[',]/g,''), (err, response, body) => err?rej(err):res(body)));
+        const {$, response, body} = await CheerioHttpcli.fetch(goatbotsSearchURI + normalizeCardName(card.name));
         const json = JSON.parse(body);
         const price = json[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= base.getTime()?cur:acc)).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
 
@@ -42,10 +57,9 @@ async function fetchCardPrice(card, base = new Date()) {
 async function calcCard(card, fetch = false, date = new Date()) {
     if(/^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)) return new CardWithPrice(card.name, card.number, 0);
     if(fetch) return fetchCardPrice(card, date);
-    const regexpCard = new RegExp('^\\s*' + card.name + '\\s*$', 'i');
-    const priceCard = Cardlist.find((c) => regexpCard.test(c.name));
-    if(!priceCard) return new CardWithPrice(card.name, card.number, 0, '', 'Not Available');
-    return new CardWithPrice(priceCard.name, card.number, parseFloat(priceCard.price), priceCard.foil, priceCard.set, priceCard.cmc, priceCard.type);
+    const cardObj = Cardlist.find((c) => normalizeCardName(c.name) == normalizeCardName(card.name));
+    if(!cardObj) return new CardWithPrice(card.name, card.number, 0, '', 'Not Available');
+    return new CardWithPrice(cardObj.name, card.number, parseFloat(cardObj.price), cardObj.foil, cardObj.set, cardObj.cmc, cardObj.type);
 }
 
 async function calcDecklist(decklist, fetch = false, date = new Date()) {
@@ -68,6 +82,7 @@ const router = new Router();
 router
     .get('/', async (ctx, next) => Send(ctx, '/views' + '/index.html'))
     .get('/calc', async (ctx, next) => ctx.body = await calcDecklist(new Decklist(decodeURIComponent(ctx.request.query.decklist)), (ctx.request.query.fetch && ctx.request.query.fetch == 'true'), (!ctx.request.query.date || ctx.request.query.date == '')?new Date():new Date(ctx.request.query.date)))
+    .get('/fetch3dhTable', async (ctx, next) => ctx.body = await fetch3dhTable())
     .get('/:str', async (ctx, next) => Send(ctx, '/views' + '/' + ctx.params.str))
 ;
 
