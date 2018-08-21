@@ -1,6 +1,10 @@
 class JSONConvertable {
-    convertToJSON() {
+    convertToJSONString() {
         return JSON.stringify(this);
+    }
+
+    convertToJSON() {
+        return JSON.parse(this.convertToJSONString());
     }
 
     convertFromJSON(json) {
