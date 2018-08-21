@@ -7,9 +7,6 @@ const goatbotsURI = 'https://www.goatbots.com';
 const goatbotsSearchURI = goatbotsURI + '/card/ajax_card?search_name=';
 const goatbots3dhURI = goatbotsURI + '/3dh';
 
-const Storage = require('@google-cloud/storage');
-const storage = new Storage();
-
 const Fs = require('fs');
 
 const Datastore = require('@google-cloud/datastore');
