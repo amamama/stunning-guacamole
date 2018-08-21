@@ -15,8 +15,7 @@ const datastore = new Datastore();
 const CheerioHttpcli = require('cheerio-httpcli');
 
 const key3dhDate = datastore.key(['3dh', 'date']);
-//const cachedDate = datastore.get(key3dhDate).then((es) => new Date(es[0].date)).catch((e) => new Date(0));
-const cachedDate = new Date(0);
+const cachedDate = datastore.get(key3dhDate).then((es) => new Date(es[0].date)).catch((e) => new Date(0));
 const cardlist = new Promise((res, rej) => Fs.readFile('cardlist.json', (e, d) => {if(e) rej(e);res(JSON.parse(d))}));
 
 const {
@@ -32,8 +31,8 @@ function normalizeCardName(name) {
 }
 
 async function fetch3dhTable(submitPromise) {
-	//const {$, response, body} = await submitPromise;
-	const {$, response, body} = await CheerioHttpcli.fetch('http://localhost:8000/3dh_july_2018.html');
+	const {$, response, body} = await submitPromise;
+	//const {$, response, body} = await CheerioHttpcli.fetch('http://localhost:8000/3dh_july_2018.html');
 	return $('tr').toArray().map((e) =>
 		new CardWithPrice(
 			$($('td', e)[0]).text(),
@@ -58,10 +57,9 @@ async function update3dhTable(ctx, next) {
 		//return;
 	}
 
-	//const {$, response, body} = await CheerioHttpcli.fetch(goatbots3dhURI);
-	//const form = $('form');
-	const [str, mm, dd, yy] = //form.parent('#text_left').text()
-	'Last revision: July 20th 2018\n'.match(/Last revision: ([^\n]*)\n/i)[1].replace(/Jan|Feb|Mar|Apr|May|June|July|Aug|Sept|Oct|Nov|Dec/, (m) => ({Jan:1, Feb: 2, Mar: 3, Apr: 4, May: 5, June: 6, July: 7, Aug: 8, Sept: 9, Oct: 10, Nov: 11, Dec: 12}[m]).toString()).replace(/th|st|nd|rd/, ' ').match(/(\d+) +(\d+) +(\d+)/);
+	const {$, response, body} = await CheerioHttpcli.fetch(goatbots3dhURI);
+	const form = $('form');
+	const [str, mm, dd, yy] = form.parent('#text_left').text().match(/Last revision: ([^\n]*)\n/i)[1].replace(/Jan|Feb|Mar|Apr|May|June|July|Aug|Sept|Oct|Nov|Dec/, (m) => ({Jan:1, Feb: 2, Mar: 3, Apr: 4, May: 5, June: 6, July: 7, Aug: 8, Sept: 9, Oct: 10, Nov: 11, Dec: 12}[m]).toString()).replace(/th|st|nd|rd/, ' ').match(/(\d+) +(\d+) +(\d+)/);
 
 	const newDate = new Date(yy, mm - 1, dd);
 
@@ -70,26 +68,15 @@ async function update3dhTable(ctx, next) {
 		return;
 	}
 
-	try {
-		//const newCardlistPromise = fetch3dhTable(form.submit());
-		const newCardlistPromise = fetch3dhTable();
-		save3dhCardlist(newCardlistPromise, newDate);
-		ctx.body = 'update';
-	} catch (e) {
-		ctx.body = 'error occured';
-	}
+	save3dhCardlist(fetch3dhTable(form.submit()), newDate);
+	ctx.body = 'update';
 	return;
 }
 
 async function fetchCardPrice(card, base = new Date()) {
-	//console.log(goatbotsURI + card.name.replace(/[ \/]/g, '-').replace(/[',]/g,''));
 	try {
 		await new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000));
-		const {
-			$,
-			response,
-			body
-		} = await CheerioHttpcli.fetch(goatbotsSearchURI + normalizeCardName(card.name));
+		const {$, response, body} = await CheerioHttpcli.fetch(goatbotsSearchURI + normalizeCardName(card.name));
 		const json = JSON.parse(body);
 		const price = json[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= base.getTime() ? cur : acc)).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
 

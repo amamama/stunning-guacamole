@@ -21,12 +21,13 @@
     "e2e-test": "repo-tools test deploy"
   },
   "dependencies": {
+    "@google-cloud/datastore": "^1.4.2",
+    "@google-cloud/debug-agent": "^2.4.0",
+    "cheerio-httpcli": "latest",
     "koa": "latest",
     "koa-body": "latest",
     "koa-router": "latest",
-    "koa-send": "latest",
-    "request": "latest",
-    "@google-cloud/debug-agent": "^2.4.0"
+    "koa-send": "latest"
   },
   "devDependencies": {
     "@google-cloud/nodejs-repo-tools": "^2.3.0",
