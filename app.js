@@ -1,19 +1,3 @@
-/**
- * Copyright 2017, Google, Inc.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*eslint-disable no-unused-vars */
 'use strict';
 require('@google-cloud/debug-agent').start({
 	allowExpressions: true
@@ -23,15 +7,20 @@ const goatbotsURI = 'https://www.goatbots.com';
 const goatbotsSearchURI = goatbotsURI + '/card/ajax_card?search_name=';
 const goatbots3dhURI = goatbotsURI + '/3dh';
 
+const Storage = require('@google-cloud/storage');
+const storage = new Storage();
+
+const Fs = require('fs');
+
 const Datastore = require('@google-cloud/datastore');
 const datastore = new Datastore();
+
 const CheerioHttpcli = require('cheerio-httpcli');
 
-
 const key3dhDate = datastore.key(['3dh', 'date']);
-const key3dhCardlist = datastore.key(['3dh', 'cardlist']);
-const cachedDate = datastore.get(key3dhDate).then((es) => new Date(es[0].date)).catch((e) => new Date(0));
-const cardlist = datastore.get(key3dhCardlist).then((es) => es[0].cardlist).catch((e) => []);
+//const cachedDate = datastore.get(key3dhDate).then((es) => new Date(es[0].date)).catch((e) => new Date(0));
+const cachedDate = new Date(0);
+const cardlist = new Promise((res, rej) => Fs.readFile('cardlist.json', (e, d) => {if(e) rej(e);res(JSON.parse(d))}));
 
 const {
 	Card,
@@ -46,8 +35,8 @@ function normalizeCardName(name) {
 }
 
 async function fetch3dhTable(submitPromise) {
-	//({$, response, body} = await submitPromise;
-	let {$, response, body} = await CheerioHttpcli.fetch('http://localhost:8000/3dh_july_2018.html');
+	//const {$, response, body} = await submitPromise;
+	const {$, response, body} = await CheerioHttpcli.fetch('http://localhost:8000/3dh_july_2018.html');
 	return $('tr').toArray().map((e) =>
 		new CardWithPrice(
 			$($('td', e)[0]).text(),
@@ -61,15 +50,9 @@ async function fetch3dhTable(submitPromise) {
 	);
 }
 
-async function save3dhTable(table, date) {
-	try {
-		await datastore.save({key: key3dhDate, data: {date: date.toJSON()}});
-		await datastore.save({key: key3dhCardlist, data: {cardlist: table.map((c) => c.convertToJSON())}});
-	} catch(e) {
-		console.log(e);
-		return `${e}`;
-	}
-	return `save table ${date}`;
+async function save3dhCardlist(cardlistPromise, date) {
+	datastore.save({key: key3dhDate, data: {date: date.toJSON()}});
+	Fs.writeFile('cardlist.json', (await cardlistPromise).convertToJSONString(), (e) => {if(e) throw e;});
 }
 
 async function update3dhTable(ctx, next) {
@@ -80,18 +63,8 @@ async function update3dhTable(ctx, next) {
 
 	//const {$, response, body} = await CheerioHttpcli.fetch(goatbots3dhURI);
 	//const form = $('form');
-	const [str, mm, dd, yy] = //$('form').parent('#text_left').text();
-		`
-	3 Dollar Highlander
-	3DH or 3 Dollar Highlander is a budget friendly version of Commander. Every deck should cost no more than 3.00 tickets as of the latest revision. For more information about the format or to find fellow players, check out the 3DH Discord Channel.
-	 
-	 
-	Latest Legal Cards
-	Last revision: July 20th 2018
-	
-		
-	
-	`.match(/Last revision: ([^\n]*)\n/i)[1].replace(/Jan|Feb|Mar|Apr|May|June|July|Aug|Sept|Oct|Nov|Dec/, (m) => ({Jan:1, Feb: 2, Mar: 3, Apr: 4, May: 5, June: 6, July: 7, Aug: 8, Sept: 9, Oct: 10, Nov: 11, Dec: 12}[m]).toString()).replace(/th|st|nd|rd/, ' ').match(/(\d*) (\d*) (\d*)/);
+	const [str, mm, dd, yy] = //form.parent('#text_left').text()
+	'Last revision: July 20th 2018\n'.match(/Last revision: ([^\n]*)\n/i)[1].replace(/Jan|Feb|Mar|Apr|May|June|July|Aug|Sept|Oct|Nov|Dec/, (m) => ({Jan:1, Feb: 2, Mar: 3, Apr: 4, May: 5, June: 6, July: 7, Aug: 8, Sept: 9, Oct: 10, Nov: 11, Dec: 12}[m]).toString()).replace(/th|st|nd|rd/, ' ').match(/(\d+) +(\d+) +(\d+)/);
 
 	const newDate = new Date(yy, mm - 1, dd);
 
@@ -100,9 +73,14 @@ async function update3dhTable(ctx, next) {
 		return;
 	}
 
-	//const newTable = await fetch3dhTable(form.submit());
-	const newTable = await fetch3dhTable();
-	ctx.body = save3dhTable(newTable, newDate);
+	try {
+		//const newCardlistPromise = fetch3dhTable(form.submit());
+		const newCardlistPromise = fetch3dhTable();
+		save3dhCardlist(newCardlistPromise, newDate);
+		ctx.body = 'update';
+	} catch (e) {
+		ctx.body = 'error occured';
+	}
 	return;
 }
 
