@@ -27,7 +27,7 @@ const {
 } = require('./views/deck');
 
 function normalizeCardName(name) {
-	return name.toLowerCase().replace(/[ \/]a/g, '-').replace(/[',]/g, '');
+	return name.toLowerCase().replace(/[ \/]/g, '-').replace(/[',]/g, '');
 }
 
 async function fetch3dhTable(submitPromise) {
@@ -77,7 +77,7 @@ async function getCardPriceJSONString(card, base) {
 	const cardName = normalizeCardName(card.name);
 	const key = datastore.key(['card', cardName]);
 	const cachedCard = await datastore.get(key).then((d) => d[0]).catch((e) => null);
-	console.log(cachedCard);
+	//console.log(cachedCard);
 
 	if(!cachedCard || (new Date(cachedCard.date)).getTime() + 24 * 60 * 60 * 1000 < base.getTime() || (new Date(cachedCard.date)).getDate() != base.getDate()) {
 		const {$, response, body} = await CheerioHttpcli.fetch(goatbotsSearchURI + cardName);
