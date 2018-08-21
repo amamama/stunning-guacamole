@@ -54,7 +54,7 @@ async function save3dhCardlist(cardlistPromise, date) {
 async function update3dhTable(ctx, next) {
 	if(ctx.get('X-Appengine-Cron') != 'true') {
 		ctx.body = 'external access is not allowed';
-		//return;
+		return;
 	}
 
 	const {$, response, body} = await CheerioHttpcli.fetch(goatbots3dhURI);
@@ -73,12 +73,25 @@ async function update3dhTable(ctx, next) {
 	return;
 }
 
+async function getCardPriceJSONString(card, base) {
+	const cardName = normalizeCardName(card.name);
+	const key = datastore.key(['card', cardName]);
+	const cachedCard = await datastore.get(key).then((d) => d[0]).catch((e) => null);
+	console.log(cachedCard);
+
+	if(!cachedCard || (new Date(cachedCard.date)).getTime() + 24 * 60 * 60 * 1000 < base.getTime() || (new Date(cachedCard.date)).getDate() != base.getDate()) {
+		const {$, response, body} = await CheerioHttpcli.fetch(goatbotsSearchURI + cardName);
+		datastore.save({key: key, excludeFromIndexes: ['jsonString'], data: {date: (new Date()).toISOString(), jsonString: body}});
+		return body;
+	} else {
+		return cachedCard.jsonString;
+	}
+}
+
 async function fetchCardPrice(card, base = new Date()) {
 	try {
-		await new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000));
-		const {$, response, body} = await CheerioHttpcli.fetch(goatbotsSearchURI + normalizeCardName(card.name));
-		const json = JSON.parse(body);
-		const price = json[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= base.getTime() ? cur : acc)).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
+		const json = JSON.parse(await getCardPriceJSONString(card, base));
+		const price = json[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= base.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
 
 		return new CardWithPrice(card.name, card.number, price, 'Unknown');
 	} catch (e) {
