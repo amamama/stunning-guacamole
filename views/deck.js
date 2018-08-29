@@ -42,6 +42,7 @@ class Decklist extends JSONConvertable {
     set decklist(s) {
         this.dlist = s;
         if(this.validateDecklist()) this.parseDecklist();
+        return s;
     }
 
     constructor(main, side) {
@@ -56,9 +57,9 @@ class Decklist extends JSONConvertable {
 
     validateDecklist() {
         if(!this.decklist) return this;
-        const matched = this.decklist.match(/^(\d+\s+[^\r\n]+|(S|s)ideboard|\B)((\r\n|\n)(\d+\s+[^\r\n]+|(S|s)ideboard|\B))*$/);
+        const matched = this.decklist.match(/^(\d*\s*[^\r\n]+|(S|s)ideboard|\B)((\r\n|\n)(\d*\s*[^\r\n]+|(S|s)ideboard|\B))*$/);
         if(!matched) {
-            console.error('nanka okasii');
+            //console.error('nanka okasii');
             //throw 'Incorrect Decklist Format';
             return false;
         }
@@ -70,9 +71,9 @@ class Decklist extends JSONConvertable {
         //-> [{main: str, sideboard: str}]
         //-> [{main: [name:str, number: int], sideboard: [~]}]
         //-> [{main: [~], sideboard: [~]}]
-         [this.main, this.sideboard] = this.decklist.match(/(\d+\s+[^\r\n]+)((\r\n|\n)(\d+\s+[^\r\n]+))*/g).map((s) => {
-            return s.match(/\d+\s+[^\r\n]+/g).map((s) => {
-                const [number, name] = s.match(/(\d+)\s+([^\r\n]+)/).slice(1, 3);
+         [this.main, this.sideboard] = this.decklist.match(/(\d*\s*[^\r\n]+)((\r\n|\n)(\d*\s*[^\r\n]+))*/g).map((s) => {
+            return s.match(/\d*\s*[^\r\n]+/g).map((s) => {
+                const [number, name] = s.match(/(\d*)\s*([^\r\n]+)/).slice(1, 3);
                 return new Card(name, parseInt(number));
             });
         });
