@@ -1,4 +1,4 @@
 cron:
-    - decription "update 3dh table"
-      url /update3dhTable
-      schedule every 24 hours synchronized
+- description: "update 3dh table"
+  url: /update3dhTable
+  schedule: every 24 hours synchronized
