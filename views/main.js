@@ -2,8 +2,8 @@ function addEventListenerPromise(target, type, listener) {
     return new Promise((res, rej) => target.addEventListener(type, (e) => res(listener(e))));
 }
 
-async function calcTextDecklist(str, doFetch, date) {
-    return (new Decklist()).convertFromJSON(await fetch(`/calc?decklist=${encodeURIComponent(str)}&fetch=${doFetch}&date=${date.toISOString()}`).then((r) => r.json()));
+async function calcTextDecklist(str, date) {
+    return (new Decklist()).convertFromJSON(await fetch(`/calc?decklist=${encodeURIComponent(str)}&date=${date.toISOString()}`).then((r) => r.json()));
 }
 
 document.addEventListener('DOMContentLoaded', load);
@@ -18,13 +18,10 @@ function load() {
     dl_files.addEventListener('change', readDeckFromFile);
 
     async function calcTextDeck(name, str) {
-        const chkbox = document.getElementById('fetch');
         const base = document.getElementById('date');
-        const cachedDate = new Date(2018, 6, 20);
 
-        const doFetch = chkbox.checked;
-        const date = doFetch?base.value == ""?new Date():new Date(base.value):cachedDate;
-        return new DeckWithDate(name, await calcTextDecklist(str, doFetch, date), date);
+        const date = base.value == ""?new Date():new Date(base.value);
+        return new DeckWithDate(name, await calcTextDecklist(str, date), date);
     }
 
 
@@ -62,15 +59,15 @@ function deckToTable(deck) {
 
     const boardRow = table.tHead.insertRow();
     const mainCell = boardRow.insertCell();
-    mainCell.colSpan = 6;
+    mainCell.colSpan = 4;
     mainCell.appendChild(document.createTextNode(`Mainboard ${mainPrice.toFixed(3)} Tix`));
     const sideCell = boardRow.insertCell();
-    sideCell.colSpan = 6;
+    sideCell.colSpan = 4;
     sideCell.appendChild(document.createTextNode(`Sideboard ${sidePrice.toFixed(3)} Tix`));
 
     const cardDataRow = table.tHead.insertRow();
     for(let i = 0; i < 2; i++) {
-        for(const h of ['Num', 'Name', 'Price', 'Sum', 'Foil', 'Set']) {
+        for(const h of ['Num', 'Name', 'Price', 'Sum']) {
             cardDataRow.insertCell().appendChild(document.createTextNode(h));
         }
     }
@@ -83,8 +80,6 @@ function deckToTable(deck) {
             row.insertCell().appendChild(document.createTextNode(card.name));
             row.insertCell().appendChild(document.createTextNode(card.price.toFixed(3)));
             row.insertCell().appendChild(document.createTextNode(card.price_sum.toFixed(3)));
-            row.insertCell().appendChild(document.createTextNode(card.foil));
-            row.insertCell().appendChild(document.createTextNode(card.set));
         } else {
             for(let j = 0; j < 6; j++) {
                 row.insertCell().appendChild(document.createTextNode(''));
@@ -96,8 +91,6 @@ function deckToTable(deck) {
             row.insertCell().appendChild(document.createTextNode(card.name));
             row.insertCell().appendChild(document.createTextNode(card.price.toFixed(3)));
             row.insertCell().appendChild(document.createTextNode(card.price_sum.toFixed(3)));
-            row.insertCell().appendChild(document.createTextNode(card.foil));
-            row.insertCell().appendChild(document.createTextNode(card.set));
         }
     }
 

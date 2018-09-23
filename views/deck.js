@@ -14,6 +14,18 @@ class JSONConvertable {
     }
 }
 
+class CardFace extends JSONConvertable {
+    constructor(name, manaCost, cmc, type, oracle, colors, colorId) {
+        this.name = name;
+        this.manaCost = manaCost;
+        this.cmc = cmc;
+        this.type = type;
+        this.oracle = oracle;
+        this.colors = colors;
+        this.colorId = colorId;
+    }
+}
+
 class Card extends JSONConvertable {
     constructor(name, number) {
         super(); //for super class. its redundant
@@ -23,14 +35,11 @@ class Card extends JSONConvertable {
 }
 
 class CardWithPrice extends Card {
-    constructor(name, number, price, foil = '', set = '', cmc = -1, cardType = '') {
+    constructor(name, number, price, cardFaces) {
         super(name, number);
         this.price = price;
         this.price_sum = price * this.number;
-        this.foil = foil;
-        this.set = set;
-        this.cmc = cmc;
-        this.cardType = cardType;
+        this.cardFaces = cardFaces;
     }
 }
 
@@ -57,10 +66,8 @@ class Decklist extends JSONConvertable {
 
     validateDecklist() {
         if(!this.decklist) return this;
-        const matched = this.decklist.match(/^(\d*\s*[^\r\n]+|(S|s)ideboard|\B)((\r\n|\n)(\d*\s*[^\r\n]+|(S|s)ideboard|\B))*$/);
+        const matched = this.decklist.match(/^(\d+\s+[^\r\n]+|(S|s)ideboard|\B)((\r\n|\n)(\d+\s+[^\r\n]+|(S|s)ideboard|\B))*$/);
         if(!matched) {
-            //console.error('nanka okasii');
-            //throw 'Incorrect Decklist Format';
             return false;
         }
         return true;
@@ -71,9 +78,9 @@ class Decklist extends JSONConvertable {
         //-> [{main: str, sideboard: str}]
         //-> [{main: [name:str, number: int], sideboard: [~]}]
         //-> [{main: [~], sideboard: [~]}]
-         [this.main, this.sideboard] = this.decklist.match(/(\d*\s*[^\r\n]+)((\r\n|\n)(\d*\s*[^\r\n]+))*/g).map((s) => {
-            return s.match(/\d*\s*[^\r\n]+/g).map((s) => {
-                const [number, name] = s.match(/(\d*)\s*([^\r\n]+)/).slice(1, 3);
+         [this.main, this.sideboard] = this.decklist.match(/(\d+\s+[^\r\n]+)((\r\n|\n)(\d+\s+[^\r\n]+))*/g).map((s) => {
+            return s.match(/\d+\s+[^\r\n]+/g).map((s) => {
+                const [number, name] = s.match(/(\d+)\s+([^\r\n]+)/).slice(1, 3);
                 return new Card(name, parseInt(number));
             });
         });
@@ -123,6 +130,7 @@ class DeckWithDate extends Deck {
 
 if(typeof module !== 'undefined')
 module.exports = {
+    CardFace,
     Card,
     CardWithPrice,
     Decklist,
