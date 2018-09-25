@@ -24,7 +24,7 @@ const {
 } = require('./views/deck');
 
 function normalizeCardName(name) {
-	return name.toLowerCase().replace(/[ \/]/g, '-').replace(/[',]/g, '');
+	return name.toLowerCase().replace(/[ \/]/g, '-').replace(/['",:;!.]/g, '');
 }
 
 async function fetchCardData(card, base) {
@@ -32,9 +32,9 @@ async function fetchCardData(card, base) {
 	const key = datastore.key(['card', cardName]);
 	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
 
-	if(!cachedData || (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000 < base.getTime() || (new Date(cachedData.date)).getDate() != base.getDate()) {
+	if(!cachedData || (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000 < base.getTime() || (new Date(cachedData.date)).getDate() != (new Date()).getDate()) {
 
-		await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000)));
+		await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000 * 6)));
 
 		const goatbotsPromise = CheerioHttpcli.fetch(goatbotsSearchURI + cardName);
 		const scryfallPromise = CheerioHttpcli.fetch(scryfallSearchURI + cardName);
@@ -51,22 +51,18 @@ function toCardFaces(scryfallBody) {
 	return [];
 }
 
-async function getCardData(card, base = new Date()) {
+async function calcCardData(card, date = new Date()) {
+	if (/^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)) return new CardWithPrice(card.name, card.number, 0, []);
 	try {
-		const data = await fetchCardData(card, base);
+		const data = await fetchCardData(card, date);
 		const priceArr = JSON.parse(data.goatbotsBody);
-		const price = priceArr[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= base.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
+		const price = priceArr[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
 
 		return new CardWithPrice(card.name, card.number, price, toCardFaces(data.scryfallBody));
 	} catch (e) {
 		console.log(e.message);
 		return new CardWithPrice(card.name, card.number, 0, []);
 	}
-}
-
-async function calcCardData(card, date = new Date()) {
-	if (/^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)) return new CardWithPrice(card.name, card.number, 0);
-	return getCardData(card, date);
 }
 
 async function calcDecklist(decklist, date = new Date()) {
@@ -84,7 +80,7 @@ const router = new Router();
 
 router
 	.get('/', async (ctx, next) => Send(ctx, '/views' + '/index.html'))
-	.get('/calc', async (ctx, next) => ctx.body = await calcDecklist(new Decklist(decodeURIComponent(ctx.query.decklist)), (!ctx.query.date || ctx.query.date == '') ? new Date() : new Date(ctx.query.date)))
+	.get('/calc', async (ctx, next) => ctx.body = await calcDecklist(Decklist.parseDecklist(decodeURIComponent(ctx.query.decklist)), (!ctx.query.date || ctx.query.date == '') ? new Date() : new Date(ctx.query.date)))
 	.get('/:str', async(ctx, next) => Send(ctx, '/views' + '/' + ctx.params.str));
 
 koa
