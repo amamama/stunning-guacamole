@@ -173,12 +173,13 @@ class Decklist extends JSONConvertable {
         function parseTXT() {
             const lines = str.split(/\r\n|\n/);
             const main = [], side = [];
-            for(let i = 0, isMain = true; i < lines.length; i++) {
+            for(let i = 0, isMain = true; !/^$/.test(str) && i < lines.length; i++) {
                 if(/^(?:(?:S|s)ideboard)?$/.test(lines[i])) {
                     isMain = false;
                     continue;
                 }
                 const result = lines[i].match(/^(\d+)\s+(.*)$/);
+                if(!result || result.index != 0) throw `ParseTXT Error at ${lines[i]}`;
                 const name = result[2], num = result[1];
                 const card = new Card(name, num);
                 (isMain?main:side).push(card);
