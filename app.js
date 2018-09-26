@@ -32,19 +32,16 @@ async function fetchCardData(card, base) {
 	const key = datastore.key(['card', cardName]);
 	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
 
-	if(!cachedData || (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000 < base.getTime() || (new Date(cachedData.date)).getDate() != (new Date()).getDate()) {
+	if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
 
-		await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000 * 6)));
+	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000 * 6)));
 
-		const goatbotsPromise = CheerioHttpcli.fetch(goatbotsSearchURI + cardName);
-		const scryfallPromise = CheerioHttpcli.fetch(scryfallSearchURI + cardName);
-		const data = {date: (new Date()).toISOString(), goatbotsBody: (await goatbotsPromise).body, scryfallBody: (await scryfallPromise).body};
+	const goatbotsPromise = CheerioHttpcli.fetch(goatbotsSearchURI + cardName);
+	const scryfallPromise = CheerioHttpcli.fetch(scryfallSearchURI + cardName);
+	const data = {date: (new Date()).toISOString(), goatbotsBody: (await goatbotsPromise).body, scryfallBody: (await scryfallPromise).body};
 
-		datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
-		return data;
-	} else {
-		return cachedData;
-	}
+	datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
+	return data;
 }
 
 function toCardFaces(scryfallBody) {
@@ -60,7 +57,7 @@ async function calcCardData(card, date = new Date()) {
 
 		return new CardWithPrice(card.name, card.number, price, toCardFaces(data.scryfallBody));
 	} catch (e) {
-		console.log(e.message);
+		console.log(e.message, e.url, e.statusCode);
 		return new CardWithPrice(card.name, card.number, 0, []);
 	}
 }
