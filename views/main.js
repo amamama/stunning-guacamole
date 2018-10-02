@@ -21,7 +21,7 @@ function load() {
         const base = document.getElementById('date');
 
         const date = base.value == ""?new Date():new Date(base.value);
-        return new DeckWithDate(name, await calcTextDecklist(str, date), date);
+        return new Deck(name, await calcTextDecklist(str, date), date);
     }
 
 

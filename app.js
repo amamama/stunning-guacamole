@@ -19,8 +19,7 @@ const {
 	Card,
 	CardWithPrice,
 	Decklist,
-	Deck,
-	DeckWithDate
+	Deck
 } = require('./views/deck');
 
 function normalizeCardName(name) {
@@ -71,16 +70,19 @@ const Koa = require('koa');
 const Router = require('koa-router');
 const Send = require('koa-send');
 const Body = require('koa-body');
+const Kcors = require('kcors');
 
 const koa = new Koa();
 const router = new Router();
 
 router
 	.get('/', async (ctx, next) => Send(ctx, '/views' + '/index.html'))
-	.get('/calc', async (ctx, next) => ctx.body = await calcDecklist(Decklist.parseDecklist(decodeURIComponent(ctx.query.decklist)), (!ctx.query.date || ctx.query.date == '') ? new Date() : new Date(ctx.query.date)))
+	.options('/calc', Kcors())
+	.get('/calc', Kcors(), async (ctx, next) => ctx.body = await calcDecklist(Decklist.parseDecklist(decodeURIComponent(ctx.query.decklist)), (!ctx.query.date || ctx.query.date == '') ? new Date() : new Date(ctx.query.date)))
 	.get('/:str', async(ctx, next) => Send(ctx, '/views' + '/' + ctx.params.str));
 
 koa
-	.use(router.routes());
+	.use(router.routes())
+	.use(router.allowedMethods())
 
-koa.listen(process.env.PORT || 8080);
+	.listen(process.env.PORT || 8080);

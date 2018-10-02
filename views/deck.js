@@ -27,10 +27,11 @@ class CardFace extends JSONConvertable {
 }
 
 class Card extends JSONConvertable {
-    constructor(name, number) {
+    constructor(name, number, mtgoID = NaN) {
         super(); //for super class. its redundant
         this.name = name;
         this.number = number || 1;
+        this.mtgoID = mtgoID;
     }
 }
 
@@ -85,7 +86,9 @@ class Decklist extends JSONConvertable {
                 return new Decklist(main, side);
 
                 function parseCard() {
-                    consume('<', 'Cards', 'CatID', '=', '"', /\d+/, '"', 'Quantity', '=', '"');
+                    consume('<', 'Cards', 'CatID', '=', '"');
+                    const mtgoID = parseInt(getToken(/\d+/));
+                    consume('"', 'Quantity', '=', '"');
                     const num = parseInt(getToken(/\d+/));
                     consume('"', 'Sideboard', '=', '"');
                     const isMain = getToken(/true|false/i).toLowerCase() == 'false';
@@ -93,7 +96,7 @@ class Decklist extends JSONConvertable {
                     const name = getToken(/[^"]+/).replace(/&quot;/g, '"');
                     consume ('"', '/>');
 
-                    const card = new Card(name, num);
+                    const card = new Card(name, num, mtgoID);
                     (isMain?main:side).push(card);
                 }
             }
@@ -129,14 +132,18 @@ class Decklist extends JSONConvertable {
         function parseCSV() {
             const table = str.split(/(?:\r\n|\r|\n)+/).map((s) => parseLine(s));
             const colName = table.shift();
-            const nameIdx = colName.indexOf('Card Name'), quaIdx = colName.indexOf('Quantity'), sideIdx = colName.indexOf('Sideboarded');
+            const nameIdx = colName.indexOf('Card Name'),
+                  quaIdx = colName.indexOf('Quantity'),
+                  sideIdx = colName.indexOf('Sideboarded'),
+                  mtgoIDIdx = colName.indexOf('ID #');
             const main = [], side = [];
             for(const line of table) {
                 if(line.length == 0) continue;
                 const name = line[nameIdx];
                 const num = parseInt(line[quaIdx]);
+                const mtgoID = parseInt(line[mtgoIDIdx]);
                 const isMain = line[sideIdx] == 'No';
-                const card = new Card(name, num);
+                const card = new Card(name, num, mtgoID);
                 (isMain?main:side).push(card);
             }
 
@@ -203,34 +210,23 @@ class Decklist extends JSONConvertable {
         function convertCard(json) {
             if(!json) return null;
             if('price' in json) return (new CardWithPrice()).convertFromJSON(json);
-             return (new Card()).convertFromJSON(json);
+            return (new Card()).convertFromJSON(json);
         }
         return this;
     }
 }
 
 class Deck extends JSONConvertable {
-    constructor(name, decklist) {
+    constructor(name, decklist, date = new Date()) {
         super(); //for super class. its redundant
         this.name = name;
         this.decklist = decklist;
-    }
-
-    convertFromJSON(json) {
-        super.convertFromJSON(json);
-        this.decklist = (new Decklist()).convertFromJSON(this.decklist);
-        return this;
-    }
-}
-
-class DeckWithDate extends Deck {
-    constructor(name, decklist, date = new Date()) {
-        super(name, decklist);
         this.date = date;
     }
 
     convertFromJSON(json) {
         super.convertFromJSON(json);
+        this.decklist = (new Decklist()).convertFromJSON(this.decklist);
         this.date = new Date(this.date);
         return this;
     }
@@ -242,6 +238,5 @@ module.exports = {
     Card,
     CardWithPrice,
     Decklist,
-    Deck,
-    DeckWithDate
+    Deck
 };
