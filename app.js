@@ -43,7 +43,7 @@ async function fetchCardData(card, base) {
 	return data;
 }
 
-function toCardFaces(scryfallBody) {
+function toCardFaces(scryfallObj) {
 	return [];
 }
 
@@ -51,10 +51,13 @@ async function calcCardData(card, date = new Date()) {
 	if (/^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)) return new CardWithPrice(card.name, card.number, 0, []);
 	try {
 		const data = await fetchCardData(card, date);
-		const priceArr = JSON.parse(data.goatbotsBody);
-		const price = priceArr[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
+		const goatbotsObj = JSON.parse(data.goatbotsBody);
+		const price = goatbotsObj[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
 
-		return new CardWithPrice(card, price, toCardFaces(data.scryfallBody));
+		const scryfallObj = JSON.parse(data.scryfallBody);
+		card.mtgoID = card.mtgoID || scryfallObj.mtgo_id;
+
+		return new CardWithPrice(card, price, toCardFaces(scryfallObj));
 	} catch (e) {
 		console.log(e.message, e.url, e.statusCode);
 		return new CardWithPrice(card, 0, []);
