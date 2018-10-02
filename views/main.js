@@ -52,8 +52,8 @@ function deckToTable(deck) {
     const table = document.createElement('table');
     table.id = deck.name;
 
-    const mainPrice = deck.decklist.main.map((c) => c.price_sum).reduce((acc, cur) => acc + cur, 0);
-    const sidePrice = deck.decklist.sideboard.map((c) => c.price_sum).reduce((acc, cur) => acc + cur, 0);
+    const mainPrice = deck.decklist.main.map((c) => c.sumPrice).reduce((acc, cur) => acc + cur, 0);
+    const sidePrice = deck.decklist.sideboard.map((c) => c.sumPrice).reduce((acc, cur) => acc + cur, 0);
 
     table.createTHead();
 
@@ -79,7 +79,7 @@ function deckToTable(deck) {
             row.insertCell().appendChild(document.createTextNode(card.number));
             row.insertCell().appendChild(document.createTextNode(card.name));
             row.insertCell().appendChild(document.createTextNode(card.price.toFixed(3)));
-            row.insertCell().appendChild(document.createTextNode(card.price_sum.toFixed(3)));
+            row.insertCell().appendChild(document.createTextNode(card.sumPrice.toFixed(3)));
         } else {
             for(let j = 0; j < 6; j++) {
                 row.insertCell().appendChild(document.createTextNode(''));
@@ -90,7 +90,7 @@ function deckToTable(deck) {
             row.insertCell().appendChild(document.createTextNode(card.number));
             row.insertCell().appendChild(document.createTextNode(card.name));
             row.insertCell().appendChild(document.createTextNode(card.price.toFixed(3)));
-            row.insertCell().appendChild(document.createTextNode(card.price_sum.toFixed(3)));
+            row.insertCell().appendChild(document.createTextNode(card.sumPrice.toFixed(3)));
         }
     }
 

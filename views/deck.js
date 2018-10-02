@@ -36,10 +36,17 @@ class Card extends JSONConvertable {
 }
 
 class CardWithPrice extends Card {
-    constructor(name, number, price, cardFaces) {
-        super(name, number);
+    constructor(name, number, mtgoID, price, cardFaces) {
+        if(typeof name == 'object') {
+            super(name.name, name.number, name.mtgoID);
+            price = number;
+            number = name.number;
+            cardFaces = mtgoID;
+        } else {
+            super(name, number, mtgoID);
+        }
         this.price = price;
-        this.price_sum = price * this.number;
+        this.sumPrice = price * number;
         this.cardFaces = cardFaces;
     }
 }

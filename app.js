@@ -54,10 +54,10 @@ async function calcCardData(card, date = new Date()) {
 		const priceArr = JSON.parse(data.goatbotsBody);
 		const price = priceArr[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
 
-		return new CardWithPrice(card.name, card.number, price, toCardFaces(data.scryfallBody));
+		return new CardWithPrice(card, price, toCardFaces(data.scryfallBody));
 	} catch (e) {
 		console.log(e.message, e.url, e.statusCode);
-		return new CardWithPrice(card.name, card.number, 0, []);
+		return new CardWithPrice(card, 0, []);
 	}
 }
 
