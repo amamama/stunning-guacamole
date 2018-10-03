@@ -23,7 +23,7 @@ const {
 } = require('./views/deck');
 
 function normalizeCardName(name) {
-	return name.toLowerCase().replace(/[ \/]/g, '-').replace(/['",:;!.]/g, '');
+	return name.toLowerCase().replace(/[ \/]+/g, '-').replace(/['",:;!.]/g, '');
 }
 
 async function fetchCardData(card, base) {
@@ -48,7 +48,7 @@ function toCardFaces(scryfallObj) {
 }
 
 async function calcCardData(card, date = new Date()) {
-	if (/^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)) return new CardWithPrice(card.name, card.number, 0, []);
+	if (/^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)) return new CardWithPrice(card, 0, []);
 	try {
 		const data = await fetchCardData(card, date);
 		const goatbotsObj = JSON.parse(data.goatbotsBody);
