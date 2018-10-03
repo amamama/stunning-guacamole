@@ -23,7 +23,7 @@ const {
 } = require('./views/deck');
 
 function normalizeCardName(name) {
-	return name.toLowerCase().replace(/[ \/]/g, '-').replace(/['",:;!.]/g, '');
+	return name.toLowerCase().replace(/[ \/]+/g, '-').replace(/['",:;!.]/g, '');
 }
 
 async function fetchCardData(card, base) {

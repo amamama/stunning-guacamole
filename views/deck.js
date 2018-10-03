@@ -194,7 +194,7 @@ class Decklist extends JSONConvertable {
                 }
                 const result = lines[i].match(/^(\d+)\s+(.*)$/);
                 if(!result || result.index != 0) throw `ParseTXT Error at ${lines[i]}`;
-                const name = result[2], num = result[1];
+                const name = result[2], num = parseInt(result[1]);
                 const card = new Card(name, num);
                 (isMain?main:side).push(card);
             }
