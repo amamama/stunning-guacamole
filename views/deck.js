@@ -9,7 +9,7 @@ class JSONConvertable {
 
     convertFromJSON(json) {
         if(!json) return this;
-        for(const k in this) this[k] = json[k];
+        Object.assign(this, json);
         return this;
     }
 }
