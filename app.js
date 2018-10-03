@@ -12,7 +12,7 @@ const scryfallSearchURI = scryfallURI + '/cards/named?exact=';
 const Datastore = require('@google-cloud/datastore');
 const datastore = new Datastore();
 
-const CheerioHttpcli = require('cheerio-httpcli');
+const RequestPromise = require('request-promise');
 
 const {
 	CardFace,
@@ -35,9 +35,9 @@ async function fetchCardData(card, base) {
 
 	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000 * 6)));
 
-	const goatbotsPromise = CheerioHttpcli.fetch(goatbotsSearchURI + cardName);
-	const scryfallPromise = CheerioHttpcli.fetch(scryfallSearchURI + cardName);
-	const data = {date: (new Date()).toISOString(), goatbotsBody: (await goatbotsPromise).body, scryfallBody: (await scryfallPromise).body};
+	const goatbotsPromise = RequestPromise(goatbotsSearchURI + cardName);
+	const scryfallPromise = RequestPromise(scryfallSearchURI + cardName);
+	const data = {date: (new Date()).toISOString(), goatbotsBody: await goatbotsPromise, scryfallBody: await scryfallPromise};
 
 	datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
 	return data;
