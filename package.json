@@ -23,7 +23,7 @@
   "dependencies": {
     "@google-cloud/datastore": "^1.4.2",
     "@google-cloud/debug-agent": "^2.4.0",
-    "request-promise": "latest",
+    "axios": "latest",
     "cheerio": "latest",
     "kcors": "latest",
     "koa": "latest",

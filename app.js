@@ -4,15 +4,15 @@ require('@google-cloud/debug-agent').start({
 });
 
 const goatbotsURI = 'https://www.goatbots.com';
-const goatbotsSearchURI = goatbotsURI + '/card/ajax_card?search_name=';
+const goatbotsSearchURI = goatbotsURI + '/card/ajax_card' //?search_name=';
 
 const scryfallURI = 'https://api.scryfall.com';
-const scryfallSearchURI = scryfallURI + '/cards/named?exact=';
+const scryfallSearchURI = scryfallURI + '/cards/named' //?exact=';
 
 const Datastore = require('@google-cloud/datastore');
 const datastore = new Datastore();
 
-const RequestPromise = require('request-promise');
+const Axios = require('axios');
 
 const {
 	CardFace,
@@ -33,11 +33,11 @@ async function fetchCardData(card, base) {
 
 	if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
 
-	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000 * 6)));
+	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000 * 5)));
 
-	const goatbotsPromise = RequestPromise(goatbotsSearchURI + cardName);
-	const scryfallPromise = RequestPromise(scryfallSearchURI + cardName);
-	const data = {date: (new Date()).toISOString(), goatbotsBody: await goatbotsPromise, scryfallBody: await scryfallPromise};
+	const goatbotsPromise = Axios.get(goatbotsSearchURI, {params: {search_name: cardName}}).then((r) => r.data);
+	const scryfallPromise = Axios.get(scryfallSearchURI, {params: {exact: cardName}}).then((r) => r.data);
+	const data = {date: (new Date()).toISOString(), goatbotsBody: JSON.stringify(await goatbotsPromise), scryfallBody: JSON.stringify(await scryfallPromise)};
 
 	datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
 	return data;
@@ -59,7 +59,7 @@ async function calcCardData(card, date = new Date()) {
 
 		return new CardWithPrice(card, price, toCardFaces(scryfallObj));
 	} catch (e) {
-		console.log(e.message, e.url, e.statusCode);
+		console.log(e.message);
 		return new CardWithPrice(card, 0, []);
 	}
 }
