@@ -36,6 +36,10 @@ class Card extends JSONConvertable {
 }
 
 class CardWithPrice extends Card {
+    static fromCard(c, price, cardFaces) {
+        return new CardWithPrice(c.name, c.number, c.mtgoID, cardFaces);
+    }
+
     constructor(name, number, mtgoID, price, cardFaces) {
         if(typeof name == 'object') {
             super(name.name, name.number, name.mtgoID);
@@ -208,6 +212,10 @@ class Decklist extends JSONConvertable {
         super(); //for super class. its redundant
         this.main = main;
         this.sideboard = side;
+    }
+
+    toString() {
+        return this.main.map((c) => `${c.number} ${c.name}`).join('\n') + '\nSideboard\n' + this.sideboard.map((c) => `${c.number} ${c.name}`).join('\n');
     }
 
     convertFromJSON(json) {

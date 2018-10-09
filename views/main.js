@@ -2,8 +2,14 @@ function addEventListenerPromise(target, type, listener) {
     return new Promise((res, rej) => target.addEventListener(type, (e) => res(listener(e))));
 }
 
-async function calcTextDecklist(str, date) {
-    return (new Decklist()).convertFromJSON(await fetch(`/calc?decklist=${encodeURIComponent(str)}&date=${date.toISOString()}`).then((r) => r.json()));
+function createURLParams(url, params) {
+    const sp = new URLSearchParams('');
+    Object.entries(params).forEach(([k, v]) => sp.set(k, v));
+    return url + '?' + sp.toString();
+}
+
+async function calcDecklist(str, date) {
+    return (new Decklist()).convertFromJSON(await fetch(createURLParams('/calc', {decklist: str, date: date.toISOString()})).then((r) => r.json()));
 }
 
 document.addEventListener('DOMContentLoaded', load);
@@ -21,7 +27,7 @@ function load() {
         const base = document.getElementById('date');
 
         const date = base.value == ""?new Date():new Date(base.value);
-        return new Deck(name, await calcTextDecklist(str, date), date);
+        return new Deck(name, await calcDecklist(str, date), date);
     }
 
 
@@ -97,7 +103,14 @@ function deckToTable(deck) {
     const totalPrice = mainPrice + sidePrice;
     table.createCaption();
     const date = `${deck.date.getFullYear()}-${deck.date.getMonth() + 1}-${deck.date.getDate()}`;
-    table.caption.innerText = `${deck.name} total ${totalPrice.toFixed(3)} tix (${date})`;
+    //table.caption.innerText = `${deck.name} total ${totalPrice.toFixed(3)} tix (${date})`;
+    const previewLink = document.createElement('a');
+    previewLink.href = createURLParams('/preview', {decklist: deck.decklist.toString(), date: deck.date.toISOString(), name: deck.name});
+    previewLink.rel = 'noopener noreferrer';
+    previewLink.target = '_blank';
+    previewLink.appendChild(document.createTextNode(`${deck.name} total ${totalPrice.toFixed(3)} tix (${date})`));
+    table.caption.appendChild(previewLink);
+    //innerText = `${deck.name} total ${totalPrice.toFixed(3)} tix (${date})`;
     return table;
 }
 
