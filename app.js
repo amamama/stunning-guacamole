@@ -4,10 +4,11 @@ require('@google-cloud/debug-agent').start({
 });
 
 const goatbotsURI = 'https://www.goatbots.com';
-const goatbotsSearchURI = goatbotsURI + '/card/ajax_card' //?search_name=';
+const goatbotsSearchURI = goatbotsURI + '/card/ajax_card'; //?search_name=';
 
 const scryfallURI = 'https://api.scryfall.com';
-const scryfallSearchURI = scryfallURI + '/cards/named' //?exact=';
+const scryfallSearchURI = scryfallURI + '/cards/named'; //?exact=';
+const scryfallMOListURI = scryfallURI + 'cards/search?q=game%3Amtgo';
 
 const Datastore = require('@google-cloud/datastore');
 const datastore = new Datastore();
@@ -26,21 +27,62 @@ function normalizeCardName(name) {
 	return name.toLowerCase().replace(/[ \/]+/g, '-').replace(/['",:;!.]/g, '');
 }
 
-async function fetchCardData(card, base) {
+async function cachingCard(cardObj, base = new Date()) {
+	const cardName = cardObj.layout == 'transform' || cardObj.layout == 'flip' ? cardObj.card_faces[0].name : cardObj.name;
+	const normalizedName = normalizeCardName(cardName);
+	const key = datastore.key(['card', normalizedName]);
+	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
+
+	if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
+
+	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 2000 + 2000)));
+
+	const goatbotsPromise = Axios.get(goatbotsSearchURI, {params: {search_name: normalizedName}}).then((r) => r.data);
+
+	const data = {date: (new Date()).toISOString(), goatbotsBody: JSON.stringify(await goatbotsPromise), scryfallBody: JSON.stringify(cardObj)};
+
+	datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
+	return data;
+}
+
+function cachingCardlist(cardlist) {
+	for(const cardObj of cardlist) {
+		cachingCard(cardObj);
+	}
+}
+
+async function cachingData(ctx, next) {
+	if(ctx.get('X-Appengine-Cron') != 'true') ctx.throw(500,'external access is not allowed');
+
+	const key = datastore.key(['cache', 'nextURI']);
+	const nextURI = await datastore.get(key).then((d) => d[0]).catch((e) => null);
+	if(!nextURI) ctx.throw(500, 'uri is missing');
+
+	const listObj = await Axios.get(nextURI.uri).then((r) => r.data);
+	const uri = listObj.has_more ? listObj.next_page : scryfallMOListURI;
+
+	try {
+		cachingCardlist(listObj.data);
+	} catch(e) {
+		console.log(e.response);
+		console.log(e.message);
+	}
+	const data = {uri: uri};
+	datastore.save({key: key, excludeFromIndexes: ['uri'], data: data});
+
+	return `cache ${nextURI.uri} at ${(new Date()).toISOString()}`;
+}
+
+async function fetchCardData(card, base = new Date()) {
 	const cardName = normalizeCardName(card.name);
 	const key = datastore.key(['card', cardName]);
 	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
 
 	if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
 
-	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000 * 5)));
+	const scryfallBody = !cachedData?await Axios.get(scryfallSearchURI, {params: {exact: cardName}}).then((r) => r.data):cachedData.scryfallBody;
 
-	const goatbotsPromise = Axios.get(goatbotsSearchURI, {params: {search_name: cardName}}).then((r) => r.data);
-	const scryfallPromise = Axios.get(scryfallSearchURI, {params: {exact: cardName}}).then((r) => r.data);
-	const data = {date: (new Date()).toISOString(), goatbotsBody: JSON.stringify(await goatbotsPromise), scryfallBody: JSON.stringify(await scryfallPromise)};
-
-	datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
-	return data;
+	return cachingCard(scryfallBody, base);
 }
 
 function toCardFaces(scryfallObj) {
@@ -58,10 +100,7 @@ async function calcCardData(card, date = new Date()) {
 
 		return new CardWithPrice(card, price, toCardFaces(scryfallObj));
 	} catch (e) {
-		console.log(e.response.data);
-		console.log(e.response.status);      // 例：400
-		console.log(e.response.statusText);  // Bad Request
-		console.log(e.response.headers);
+		console.log(e.response);
 		console.log(e.message);
 		return new CardWithPrice(card, -1, []);
 	}
@@ -151,6 +190,7 @@ router
 	.get('/', async (ctx, next) => Send(ctx, '/views' + '/index.html'))
 	.options('/calc', Kcors())
 	.get('/calc', Kcors(), async (ctx, next) => ctx.body = await calcDecklist(Decklist.parseDecklist(decodeURIComponent(ctx.query.decklist || '')), ctx.query.date ? new Date(ctx.query.date) : new Date()))
+	.get('/caching', async (ctx, next) => ctx.body = await cachingData(ctx, next))
 	.get('/preview', async (ctx, next) => ctx.body = await previewDecklist(Decklist.parseDecklist(decodeURIComponent(ctx.query.decklist || '')), ctx.query.date ? new Date(ctx.query.date) : new Date(), ctx.query.name || 'Deck'))
 	.get('/:str', async(ctx, next) => Send(ctx, '/views' + '/' + ctx.params.str))
 ;

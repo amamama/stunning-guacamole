@@ -36,10 +36,6 @@ class Card extends JSONConvertable {
 }
 
 class CardWithPrice extends Card {
-    static fromCard(c, price, cardFaces) {
-        return new CardWithPrice(c.name, c.number, c.mtgoID, cardFaces);
-    }
-
     constructor(name, number, mtgoID, price, cardFaces) {
         if(typeof name == 'object') {
             super(name.name, name.number, name.mtgoID);

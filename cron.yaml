@@ -1,4 +1,4 @@
 cron:
-#- description: "update 3dh table"
-#  url: /update3dhTable
-#  schedule: every 24 hours synchronized
+- description: "caching card data"
+  url: /caching
+  schedule: every 12 minutes synchronized
