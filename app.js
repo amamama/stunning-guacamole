@@ -29,6 +29,8 @@ function normalizeCardName(name) {
 
 async function cachingCard(cardObj, base = new Date()) {
 	const cardName = cardObj.layout == 'transform' || cardObj.layout == 'flip' ? cardObj.card_faces[0].name : cardObj.name;
+	console.log(typeof cardObj);
+	console.log(cardObj.name);
 	const normalizedName = normalizeCardName(cardName);
 	const key = datastore.key(['card', normalizedName]);
 	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
@@ -52,7 +54,7 @@ function cachingCardlist(cardlist) {
 }
 
 async function cachingData(ctx, next) {
-	if(ctx.get('X-Appengine-Cron') != 'true') ctx.throw(500,'external access is not allowed');
+	if(ctx.get('X-Appengine-Cron') != 'true') ctx.throw(500, 'external access is not allowed');
 
 	const key = datastore.key(['cache', 'nextURI']);
 	const nextURI = await datastore.get(key).then((d) => d[0]).catch((e) => null);
@@ -80,7 +82,7 @@ async function fetchCardData(card, base = new Date()) {
 
 	if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
 
-	const scryfallBody = !cachedData?await Axios.get(scryfallSearchURI, {params: {exact: cardName}}).then((r) => r.data):cachedData.scryfallBody;
+	const scryfallBody = !cachedData?await Axios.get(scryfallSearchURI, {params: {exact: cardName}}).then((r) => r.data):JSON.parse(cachedData.scryfallBody);
 
 	return cachingCard(scryfallBody, base);
 }
