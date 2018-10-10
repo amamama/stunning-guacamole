@@ -29,8 +29,6 @@ function normalizeCardName(name) {
 
 async function cachingCard(cardObj, base = new Date()) {
 	const cardName = cardObj.layout == 'transform' || cardObj.layout == 'flip' ? cardObj.card_faces[0].name : cardObj.name;
-	console.log(typeof cardObj);
-	console.log(cardObj.name);
 	const normalizedName = normalizeCardName(cardName);
 	const key = datastore.key(['card', normalizedName]);
 	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
