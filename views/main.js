@@ -27,7 +27,7 @@ function load() {
         //const base = document.getElementById('date');
 
         //const date = base.value == ""?new Date():new Date(base.value);
-        const date = new Date(2018, 11, 20);
+        const date = new Date(2018, 9, 20);
         return new Deck(name, await calcDecklist(str, date), date);
     }
 

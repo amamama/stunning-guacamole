@@ -36,13 +36,13 @@ async function caching3dhCard(price, cardObj) {
 	const normalizedName = normalizeCardName(getName(cardObj));
 	const key = datastore.key(['card', normalizedName]);
 
-	//console.log(`save ${normalizedName}, ${price}`);
+	console.log(`save ${normalizedName}, ${price}`);
 	datastore.save({key: key, excludeFromIndexes: ['scryfallBody'], data: {price: price, scryfallBody: JSON.stringify(cardObj)}});
 }
 
 async function caching3dhCardlist(cardlist) {
 	for(const cardArr of cardlist) {
-	const cardObj = await Axios.get(scryfallSearchURI, {params: {exact: normalizeCardName(cardArr[0]), set: cardArr[2]}}).then((r) => r.data);
+		const cardObj = await Axios.get(scryfallSearchURI, {params: {exact: normalizeCardName(cardArr[0]), set: cardArr[2]}}).then((r) => r.data);
 		caching3dhCard(cardArr[1], cardObj);
 		await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000)));
 	}
@@ -50,6 +50,7 @@ async function caching3dhCardlist(cardlist) {
 
 async function caching3dh(ctx, next) {
 	const uri = ctx.query.uri;
+	console.log(uri);
 	const expMap = new Map([['7e', '7ed'], ['ap', 'apc'], ['dar', 'dom'], ['ex', 'exo'], ['in', 'inv'], ['med', 'me1'], ['mi', 'mir'], ['mm', 'mmq'], ['ms2', 'mps'], ['ms3', 'mp2'], ['ne', 'nem'], ['od', 'ody'], ['pr', 'pcy'], ['ps', 'pls'], ['st', 'sth'], ['te', 'tmp'], ['ud', 'uds'], ['ul', 'ulg'], ['uz', 'usg'], ['vi', 'vis'], ['wl', 'wth']]);
 	const {$, response, body} = await CheerioHttpcli.fetch(uri);
 	const cardlistArr = $('tr').toArray().map((e) =>
@@ -133,11 +134,12 @@ async function calcCardData(card, date = new Date()) {
 		const data = await fetchCardData(card, date);
 		//const goatbotsObj = JSON.parse(data.goatbotsBody);
 		//const price = /^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)?0:goatbotsObj[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
+		const price = /^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)?0:data.price;
 
 		const scryfallObj = JSON.parse(data.scryfallBody);
 		card.mtgoID = card.mtgoID || scryfallObj.mtgo_id;
 
-		return new CardWithPrice(card, data.price, toCardFaces(scryfallObj));
+		return new CardWithPrice(card, price, toCardFaces(scryfallObj));
 	} catch (e) {
 		//console.log(e.response);
 		console.log(e.message);
