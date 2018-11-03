@@ -24,6 +24,7 @@
     "@google-cloud/datastore": "^1.4.2",
     "@google-cloud/debug-agent": "^2.4.0",
     "axios": "latest",
+    "cheerio-httpcli": "latest",
     "cheerio": "latest",
     "kcors": "latest",
     "koa": "latest",

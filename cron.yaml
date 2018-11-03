@@ -1,4 +1,4 @@
 cron:
-- description: "caching card data"
-  url: /caching
-  schedule: every 12 minutes synchronized
+#- description: "caching card data"
+#  url: /caching
+#  schedule: every 12 minutes synchronized

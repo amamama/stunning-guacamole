@@ -24,9 +24,10 @@ function load() {
     dl_files.addEventListener('change', readDeckFromFile);
 
     async function calcTextDeck(name, str) {
-        const base = document.getElementById('date');
+        //const base = document.getElementById('date');
 
-        const date = base.value == ""?new Date():new Date(base.value);
+        //const date = base.value == ""?new Date():new Date(base.value);
+        const date = new Date(2018, 11, 20);
         return new Deck(name, await calcDecklist(str, date), date);
     }
 

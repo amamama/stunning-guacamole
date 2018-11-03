@@ -14,6 +14,7 @@ const Datastore = require('@google-cloud/datastore');
 const datastore = new Datastore();
 
 const Axios = require('axios');
+const CheerioHttpcli = require('cheerio-httpcli');
 
 const {
 	CardFace,
@@ -27,31 +28,71 @@ function normalizeCardName(name) {
 	return name.toLowerCase().replace(/[ \/]+/g, '-').replace(/['",:;!.]/g, '');
 }
 
-async function cachingCard(cardObj, base = new Date()) {
+function getName(cardObj) {
+	return cardObj.layout == 'transform' || cardObj.layout == 'flip' ? cardObj.card_faces[0].name : cardObj.name;
+}
+
+async function caching3dhCard(price, cardObj) {
+	const normalizedName = normalizeCardName(getName(cardObj));
+	const key = datastore.key(['card', normalizedName]);
+
+	//console.log(`save ${normalizedName}, ${price}`);
+	datastore.save({key: key, excludeFromIndexes: ['scryfallBody'], data: {price: price, scryfallBody: JSON.stringify(cardObj)}});
+}
+
+async function caching3dhCardlist(cardlist) {
+	for(const cardArr of cardlist) {
+	const cardObj = await Axios.get(scryfallSearchURI, {params: {exact: normalizeCardName(cardArr[0]), set: cardArr[2]}}).then((r) => r.data);
+		caching3dhCard(cardArr[1], cardObj);
+		await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000)));
+	}
+}
+
+async function caching3dh(ctx, next) {
+	const uri = ctx.query.uri;
+	const expMap = new Map([['7e', '7ed'], ['ap', 'apc'], ['dar', 'dom'], ['ex', 'exo'], ['in', 'inv'], ['med', 'me1'], ['mi', 'mir'], ['mm', 'mmq'], ['ms2', 'mps'], ['ms3', 'mp2'], ['ne', 'nem'], ['od', 'ody'], ['pr', 'pcy'], ['ps', 'pls'], ['st', 'sth'], ['te', 'tmp'], ['ud', 'uds'], ['ul', 'ulg'], ['uz', 'usg'], ['vi', 'vis'], ['wl', 'wth']]);
+	const {$, response, body} = await CheerioHttpcli.fetch(uri);
+	const cardlistArr = $('tr').toArray().map((e) =>
+		[
+			$($('td', e)[0]).text(), //name
+			parseFloat($($('td', e)[1]).text()), //price
+			expMap.get($($('td', e)[2]).text().toLowerCase()) || $($('td', e)[2]).text().toLowerCase() //set
+		]);
+	caching3dhCardlist(cardlistArr);
+	return `cache ${uri} at ${(new Date()).toISOString()}`;
+}
+
+async function cachingCard(cardObj, base = new Date()) { /*
 	const cardName = cardObj.layout == 'transform' || cardObj.layout == 'flip' ? cardObj.card_faces[0].name : cardObj.name;
 	const normalizedName = normalizeCardName(cardName);
 	const key = datastore.key(['card', normalizedName]);
 	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
 
 	if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
+	return cachedData;
 
-	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 2000 + 2000)));
+	await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 4000)));
 
-	const goatbotsPromise = Axios.get(goatbotsSearchURI, {params: {search_name: normalizedName}}).then((r) => r.data);
+	try{
+		const goatbotsPromise = Axios.get(goatbotsSearchURI, {params: {search_name: normalizedName}}).then((r) => r.data);
+		const data = {date: (new Date()).toISOString(), goatbotsBody: JSON.stringify(await goatbotsPromise), scryfallBody: JSON.stringify(cardObj)};
 
-	const data = {date: (new Date()).toISOString(), goatbotsBody: JSON.stringify(await goatbotsPromise), scryfallBody: JSON.stringify(cardObj)};
-
-	datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
-	return data;
+		datastore.save({key: key, excludeFromIndexes: ['goatbotsBody', 'scryfallBody'], data: data});
+		return data;
+	} catch(e) {
+		//console.log(e.response);
+		console.log(e.message);
+	}
+	return null; */
 }
 
 function cachingCardlist(cardlist) {
 	for(const cardObj of cardlist) {
-		cachingCard(cardObj);
+		//cachingCard(cardObj);
 	}
 }
 
-async function cachingData(ctx, next) {
+async function cachingData(ctx, next) { /*
 	if(ctx.get('X-Appengine-Cron') != 'true') ctx.throw(500, 'external access is not allowed');
 
 	const key = datastore.key(['cache', 'nextURI']);
@@ -61,16 +102,12 @@ async function cachingData(ctx, next) {
 	const listObj = await Axios.get(nextURI.uri).then((r) => r.data);
 	const uri = listObj.has_more ? listObj.next_page : scryfallMOListURI;
 
-	try {
-		cachingCardlist(listObj.data);
-	} catch(e) {
-		console.log(e.response);
-		console.log(e.message);
-	}
+	cachingCardlist(listObj.data);
+
 	const data = {uri: uri};
 	datastore.save({key: key, excludeFromIndexes: ['uri'], data: data});
 
-	return `cache ${nextURI.uri} at ${(new Date()).toISOString()}`;
+	return `cache ${nextURI.uri} at ${(new Date()).toISOString()}`; */
 }
 
 async function fetchCardData(card, base = new Date()) {
@@ -78,11 +115,13 @@ async function fetchCardData(card, base = new Date()) {
 	const key = datastore.key(['card', cardName]);
 	const cachedData = await datastore.get(key).then((d) => d[0]).catch((e) => null);
 
-	if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
+	//if(cachedData && base.getTime() < (new Date(cachedData.date)).getTime() + 24 * 60 * 60 * 1000) return cachedData;
 
-	const scryfallBody = !cachedData?await Axios.get(scryfallSearchURI, {params: {exact: cardName}}).then((r) => r.data):JSON.parse(cachedData.scryfallBody);
+	return cachedData;
 
-	return cachingCard(scryfallBody, base);
+	//const scryfallBody = !cachedData?await Axios.get(scryfallSearchURI, {params: {exact: cardName}}).then((r) => r.data):JSON.parse(cachedData.scryfallBody);
+
+	//return cachingCard(scryfallBody, base);
 }
 
 function toCardFaces(scryfallObj) {
@@ -92,15 +131,16 @@ function toCardFaces(scryfallObj) {
 async function calcCardData(card, date = new Date()) {
 	try {
 		const data = await fetchCardData(card, date);
-		const goatbotsObj = JSON.parse(data.goatbotsBody);
-		const price = /^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)?0:goatbotsObj[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
+		//const goatbotsObj = JSON.parse(data.goatbotsBody);
+		//const price = /^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)?0:goatbotsObj[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
+		const price = /^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)?0:data.price;
 
 		const scryfallObj = JSON.parse(data.scryfallBody);
 		card.mtgoID = card.mtgoID || scryfallObj.mtgo_id;
 
 		return new CardWithPrice(card, price, toCardFaces(scryfallObj));
 	} catch (e) {
-		console.log(e.response);
+		//console.log(e.response);
 		console.log(e.message);
 		return new CardWithPrice(card, -1, []);
 	}
@@ -147,6 +187,10 @@ async function previewDecklist(decklist, date = new Date(), name = 'Deck') {
     bottom: 10%;
     text-align: right;
 }
+img {
+    width: 146;
+    height: 204;
+}
     </style>
     </head>
     <body>
@@ -190,7 +234,8 @@ router
 	.get('/', async (ctx, next) => Send(ctx, '/views' + '/index.html'))
 	.options('/calc', Kcors())
 	.get('/calc', Kcors(), async (ctx, next) => ctx.body = await calcDecklist(Decklist.parseDecklist(decodeURIComponent(ctx.query.decklist || '')), ctx.query.date ? new Date(ctx.query.date) : new Date()))
-	.get('/caching', async (ctx, next) => ctx.body = await cachingData(ctx, next))
+	//.get('/caching', async (ctx, next) => ctx.body = await cachingData(ctx, next))
+	.get('/caching3dh', async (ctx, next) => ctx.body = await caching3dh(ctx, next))
 	.get('/preview', async (ctx, next) => ctx.body = await previewDecklist(Decklist.parseDecklist(decodeURIComponent(ctx.query.decklist || '')), ctx.query.date ? new Date(ctx.query.date) : new Date(), ctx.query.name || 'Deck'))
 	.get('/:str', async(ctx, next) => Send(ctx, '/views' + '/' + ctx.params.str))
 ;
