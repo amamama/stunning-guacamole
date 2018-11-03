@@ -133,12 +133,11 @@ async function calcCardData(card, date = new Date()) {
 		const data = await fetchCardData(card, date);
 		//const goatbotsObj = JSON.parse(data.goatbotsBody);
 		//const price = /^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)?0:goatbotsObj[1].map((e) => e.reduce((acc, cur) => (new Date(cur[0])).getTime() <= date.getTime() ? cur : acc), [new Date(), Infinity]).map((dateAndPrice) => dateAndPrice[1]).reduce((acc, cur) => Math.min(acc, cur), Infinity);
-		const price = /^(Plains|Island|Swamp|Mountain|Forest)$/i.test(card.name)?0:data.price;
 
 		const scryfallObj = JSON.parse(data.scryfallBody);
 		card.mtgoID = card.mtgoID || scryfallObj.mtgo_id;
 
-		return new CardWithPrice(card, price, toCardFaces(scryfallObj));
+		return new CardWithPrice(card, data.price, toCardFaces(scryfallObj));
 	} catch (e) {
 		//console.log(e.response);
 		console.log(e.message);
