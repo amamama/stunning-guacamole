@@ -10,7 +10,7 @@ const scryfallURI = 'https://api.scryfall.com';
 const scryfallSearchURI = scryfallURI + '/cards/named'; //?exact=';
 const scryfallMOListURI = scryfallURI + 'cards/search?q=game%3Amtgo';
 
-const Datastore = require('@google-cloud/datastore');
+const {Datastore} = require('@google-cloud/datastore');
 const datastore = new Datastore();
 
 const Axios = require('axios');
@@ -42,7 +42,7 @@ async function caching3dhCard(price, cardObj) {
 
 async function caching3dhCardlist(cardlist) {
 	for(const cardArr of cardlist) {
-		const cardObj = await Axios.get(scryfallSearchURI, {params: {exact: normalizeCardName(cardArr[0]), set: cardArr[2]}}).then((r) => r.data);
+		const cardObj = await Axios.get(scryfallSearchURI, {params: {exact: normalizeCardName(cardArr[0]), set: cardArr[2]}}).then((r) => r.data).catch(r => console.log(r));
 		caching3dhCard(cardArr[1], cardObj);
 		await (new Promise((res, rej) => setTimeout(() => res(), Math.random() * 1000)));
 	}

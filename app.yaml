@@ -15,6 +15,7 @@
 runtime: nodejs8
 
 env: standard
+instance_class: F1
 
 env_variables:
 # [END app_yaml]
